@@ -5,7 +5,7 @@ from underthesea import word_tokenize, pos_tag
 import warnings
 warnings.filterwarnings('ignore')
 
-print("Bắt đầu tiền xử lý dữ liệu bình luận Shopee với NLP chuẩn...\n")
+print("Bắt đầu tiền xử lý dữ liệu bình luận sàn thương mại với NLP chuẩn...\n")
 
 # Đọc dữ liệu
 df = pd.read_excel('data1.xlsx', sheet_name='data - data')
