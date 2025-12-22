@@ -22,7 +22,7 @@ def main():
 
     # ĐỌC ĐÚNG SHEET 'data' VÀ DÙNG CỘT final_comment
     try:
-        df = pd.read_excel('data_final.xlsx', sheet_name='data')
+        df = pd.read_excel('data_final.xlsx', sheet_name='Sheet1')
     except FileNotFoundError:
         raise FileNotFoundError("Không tìm thấy file 'data_final.xlsx'. Hãy chạy tiền xử lý trước (tienxuly.py) hoặc đặt file vào thư mục hiện tại.")
 
@@ -49,7 +49,7 @@ def main():
             sublinear_tf=True,
             lowercase=False
         ),
-        SVC(kernel='linear', C=1.2, probability=True, random_state=42, class_weight='balanced')
+        SVC(kernel='linear', C=1.2, random_state=42, class_weight='balanced')
     )
 
     print("Đang huấn luyện mô hình SVM + TF-IDF (có thể mất 1-3 phút)...")
