@@ -1,4 +1,3 @@
-
 import argparse
 import pandas as pd
 import numpy as np
@@ -20,26 +19,34 @@ def main():
 
     print("Đang đọc dữ liệu đã làm sạch...\n")
 
-    # ĐỌC ĐÚNG SHEET 'data' VÀ DÙNG CỘT final_comment
     try:
-        df = pd.read_excel('data_final.xlsx', sheet_name='Sheet1')
+        df = pd.read_excel('data_final.xlsx', sheet_name='Sheet1')  # đổi nếu sheet khác
     except FileNotFoundError:
-        raise FileNotFoundError("Không tìm thấy file 'data_final.xlsx'. Hãy chạy tiền xử lý trước (tienxuly.py) hoặc đặt file vào thư mục hiện tại.")
+        raise FileNotFoundError(
+            "Không tìm thấy file 'data_final.xlsx'. Hãy chạy tiền xử lý trước (tienxuly.py) "
+            "hoặc đặt file vào thư mục hiện tại."
+        )
 
     print(f"Đã tải {len(df):,} bình luận đã được xử lý sạch.")
     print("Phân bố nhãn:")
     print(df['label'].value_counts())
     print()
 
-    # DÙNG CỘT ĐÃ LÀM SẠCH HOÀN TOÀN
+    # X: văn bản đã làm sạch, y: nhãn
     X = df['final_comment'].fillna("")
     y = df['label']
 
+    # ✅ TÁCH 80/20: 80% train, 20% test
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
+        X,
+        y,
+        test_size=0.2,        # 20% test
+        random_state=42,
+        stratify=y            # giữ phân bố nhãn cân bằng
     )
 
-    # Pipeline tối ưu cho văn bản đã sạch
+    # ✅ Mô hình: TF-IDF + SVM
+    # với kernel poly và linear
     model = make_pipeline(
         TfidfVectorizer(
             max_features=30000,
@@ -49,66 +56,50 @@ def main():
             sublinear_tf=True,
             lowercase=False
         ),
-        SVC(kernel='linear', C=1.2, random_state=42, class_weight='balanced')
+        SVC(kernel='poly', C=1.2, random_state=42, class_weight='balanced')
     )
 
-    print("Đang huấn luyện mô hình SVM + TF-IDF (có thể mất 1-3 phút)...")
-    model.fit(X_train, y_train)
+    print("Đang huấn luyện mô hình SVM + TF-IDF (train 80%) ...")
+    model.fit(X_train, y_train)   # ✅ chỉ train trên 80%
 
-    # Dự đoán và đánh giá
-    y_pred = model.predict(X_test)
+    print("Đang đánh giá mô hình trên tập test 20% ...")
+    y_pred = model.predict(X_test)  # ✅ test chỉ để đánh giá
 
-    # Safe probability extraction
-    if hasattr(model, 'predict_proba'):
-        try:
-            probs = model.predict_proba(X_test).max(axis=1)
-        except Exception:
-            probs = np.full(len(y_pred), np.nan)
-    else:
-        probs = np.full(len(y_pred), np.nan)
+    # Tính accuracy và report
+    acc = accuracy_score(y_test, y_pred)
 
+    print("\n" + "=" * 70)
+    print("KẾT QUẢ ĐÁNH GIÁ (TEST 20%) - SVM + TF-IDF")
+    print("=" * 70)
+    print(f"Train size: {len(X_train):,} | Test size: {len(X_test):,}")
+    print(f"Accuracy: {acc:.4f} ({acc:.2%})")
+    print("\nClassification Report:")
+    print(classification_report(y_test, y_pred))
+    print("=" * 70)
+
+    # Tạo bảng kết quả test để lưu / xem mẫu
+    test_results = pd.DataFrame({
+        'comment': df.loc[X_test.index, 'comment'],
+        'final_comment': X_test.values,
+        'true': y_test.values,
+        'pred': y_pred
+    }).reset_index(drop=True)
+
+    # In 10 mẫu dự đoán nếu cần
     if args.show_test:
-        acc = accuracy_score(y_test, y_pred)
-
-        print("\n" + "=" * 70)
-        print("KẾT QUẢ HUẤN LUYỆN - PHÂN TÍCH CẢM XÚC ")
-        print("=" * 70)
-        print(f"Accuracy: {acc:.4f} ({acc:.2%})")
-        print("\nClassification Report:")
-        print(classification_report(y_test, y_pred))
-        print("=" * 70)
-
-        # Hiển thị 10 ví dụ thực tế
-        print("\n10 DỰ ĐOÁN THỰC TẾ (ngẫu nhiên từ tập test):")
+        print("\n10 DỰ ĐOÁN THỰC TẾ (ngẫu nhiên từ tập test 20%):")
         print("-" * 70)
 
-        test_results = pd.DataFrame({
-            'comment': df.loc[X_test.index, 'comment'],
-            'true': y_test,
-            'pred': y_pred,
-            'prob': probs
-        }).reset_index(drop=True)
-
         np.random.seed(42)
-        samples = test_results.sample(10)
+        samples = test_results.sample(min(10, len(test_results)))
 
-        for i, row in samples.iterrows():
+        for _, row in samples.iterrows():
             status = "ĐÚNG" if row['true'] == row['pred'] else "SAI"
-            prob_str = f" (độ tin cậy: {row['prob']:.3f})" if not np.isnan(row['prob']) else ""
-            print(f"[{status}] -> {row['pred']}" + prob_str)
+            print(f"[{status}] true={row['true']} -> pred={row['pred']}")
             text = str(row['comment'])
             print(f"   {text[:120]}{'...' if len(text) > 120 else ''}\n")
 
-    else:
-        # still construct test_results for optional saving
-        test_results = pd.DataFrame({
-            'comment': df.loc[X_test.index, 'comment'],
-            'true': y_test,
-            'pred': y_pred,
-            'prob': probs
-        }).reset_index(drop=True)
-
-    # Optionally save test results
+    # Lưu file test predictions nếu user yêu cầu
     if args.save_test_csv:
         try:
             test_results.to_csv(args.save_test_csv, index=False, encoding='utf-8-sig')
@@ -117,9 +108,8 @@ def main():
             print(f"Không thể lưu test results: {e}")
 
     # Lưu mô hình
-    model_file = args.model_out
-    dump(model, model_file)
-    print(f"\nMÔ HÌNH ĐÃ ĐƯỢC LƯU: {os.path.abspath(model_file)}")
+    dump(model, args.model_out)
+    print(f"\nMÔ HÌNH ĐÃ ĐƯỢC LƯU: {os.path.abspath(args.model_out)}")
 
 
 if __name__ == '__main__':
