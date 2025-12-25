@@ -36,17 +36,17 @@ def main():
     X = df['final_comment'].fillna("")
     y = df['label']
 
-    # ✅ TÁCH 80/20: 80% train, 20% test
+  
     X_train, X_test, y_train, y_test = train_test_split(
         X,
         y,
-        test_size=0.2,        # 20% test
+        test_size=0.2,        
         random_state=42,
-        stratify=y            # giữ phân bố nhãn cân bằng
+        stratify=y            
     )
 
-    # ✅ Mô hình: TF-IDF + SVM
-    # với kernel poly và linear
+    
+    
     model = make_pipeline(
         TfidfVectorizer(
             max_features=30000,
@@ -60,10 +60,10 @@ def main():
     )
 
     print("Đang huấn luyện mô hình SVM + TF-IDF (train 80%) ...")
-    model.fit(X_train, y_train)   # ✅ chỉ train trên 80%
+    model.fit(X_train, y_train)   
 
     print("Đang đánh giá mô hình trên tập test 20% ...")
-    y_pred = model.predict(X_test)  # ✅ test chỉ để đánh giá
+    y_pred = model.predict(X_test)  
 
     # Tính accuracy và report
     acc = accuracy_score(y_test, y_pred)
