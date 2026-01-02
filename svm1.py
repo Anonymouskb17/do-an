@@ -20,7 +20,9 @@ def main():
     print("Đang đọc dữ liệu đã làm sạch...\n")
 
     try:
-        df = pd.read_excel('data_final.xlsx', sheet_name='Sheet1')  # đổi nếu sheet khác
+        df = pd.read_excel('data_final.xlsx', sheet_name='Sheet1')  
+   
+        
     except FileNotFoundError:
         raise FileNotFoundError(
             "Không tìm thấy file 'data_final.xlsx'. Hãy chạy tiền xử lý trước (tienxuly.py) "
@@ -53,24 +55,21 @@ def main():
             ngram_range=(1, 4),
             min_df=2,
             max_df=0.9,
-            sublinear_tf=True,
+          
             lowercase=False
         ),
-        SVC(kernel='poly', C=1.2, random_state=42, class_weight='balanced')
+        SVC(kernel = "linear",C=1, class_weight='balanced')
+        # SVC(kernel="poly", degree=2, C=1, gamma="scale", coef0=1, class_weight="balanced")
+
     )
 
-    print("Đang huấn luyện mô hình SVM + TF-IDF (train 80%) ...")
+    print("Đang huấn luyện mô hình ...")
     model.fit(X_train, y_train)   
-
-    print("Đang đánh giá mô hình trên tập test 20% ...")
     y_pred = model.predict(X_test)  
-
     # Tính accuracy và report
     acc = accuracy_score(y_test, y_pred)
 
-    print("\n" + "=" * 70)
-    print("KẾT QUẢ ĐÁNH GIÁ (TEST 20%) - SVM + TF-IDF")
-    print("=" * 70)
+
     print(f"Train size: {len(X_train):,} | Test size: {len(X_test):,}")
     print(f"Accuracy: {acc:.4f} ({acc:.2%})")
     print("\nClassification Report:")
@@ -85,19 +84,7 @@ def main():
         'pred': y_pred
     }).reset_index(drop=True)
 
-    # In 10 mẫu dự đoán nếu cần
-    if args.show_test:
-        print("\n10 DỰ ĐOÁN THỰC TẾ (ngẫu nhiên từ tập test 20%):")
-        print("-" * 70)
-
-        np.random.seed(42)
-        samples = test_results.sample(min(10, len(test_results)))
-
-        for _, row in samples.iterrows():
-            status = "ĐÚNG" if row['true'] == row['pred'] else "SAI"
-            print(f"[{status}] true={row['true']} -> pred={row['pred']}")
-            text = str(row['comment'])
-            print(f"   {text[:120]}{'...' if len(text) > 120 else ''}\n")
+   
 
     # Lưu file test predictions nếu user yêu cầu
     if args.save_test_csv:

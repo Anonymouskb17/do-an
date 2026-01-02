@@ -3,12 +3,12 @@ import pandas as pd
 import streamlit as st
 from joblib import load
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score
 
 st.set_page_config(page_title="Kết quả dự đoán", layout="wide")
-st.title("Kết quả dự đoán")  # ✅ không nhắc tập test
+st.title("Kết quả dự đoán")
 
-MODEL_PATH = "ecommerce_sentiment_model.joblib"
+MODEL_PATH = "ecommerce_logistic_sentiment_model.joblib"
 DATA_PATH = "data_final.xlsx"
 SHEET_NAME = "Sheet1"
 
@@ -28,6 +28,7 @@ def load_data():
         df["comment"] = df["final_comment"]
 
     df["final_comment"] = df["final_comment"].fillna("").astype(str)
+    df["comment"] = df["comment"].fillna("").astype(str)
     return df
 
 if not os.path.exists(MODEL_PATH):
@@ -48,22 +49,21 @@ X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42, stratify=y
 )
 
-if st.button("Chạy và hiển thị kết quả", use_container_width=True):
-    y_pred = model.predict(X_test)
-    acc = accuracy_score(y_test, y_pred)
+# Tự chạy luôn
+y_pred = model.predict(X_test)
+acc = accuracy_score(y_test, y_pred)
 
-    st.subheader("Kết quả đánh giá")
-    st.write(f"Train size: **{len(X_train):,}** | Test size: **{len(X_test):,}**")
-    st.write(f"Accuracy: **{acc:.4f}**")
+st.subheader("Kết quả")
+st.write(f"Accuracy: **{acc:.4f}**")
 
-    st.subheader("Classification Report")
-    st.text(classification_report(y_test, y_pred))
 
-    st.subheader("Bảng dự đoán")  # ✅ không nhắc test
-    test_results = pd.DataFrame({
-        "comment": df.loc[X_test.index, "comment"].astype(str).values,
-        "final_comment": X_test.values,
-        "true": y_test.values,
-        "pred": y_pred
-    })
-    st.dataframe(test_results, use_container_width=True)
+st.subheader("Bảng dự đoán")
+test_results = pd.DataFrame({
+    "comment": df.loc[X_test.index, "comment"].astype(str).values,
+     "final_comment": pd.Series(X_test.values).str.replace("_", " ", regex=False).values,
+    "true": y_test.values,
+    "predict": y_pred
+})
+
+
+st.dataframe(test_results, use_container_width=True)
